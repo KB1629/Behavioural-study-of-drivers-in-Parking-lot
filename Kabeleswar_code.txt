@@ -1,0 +1,70 @@
+import carla
+import time
+
+#loading town
+client = carla.Client('localhost' , 2000)
+client.load_world('Town04')
+
+#creating spawn point found through manual_control
+world = client.get_world()
+map = world.get_map()
+spawn_point = carla.Transform(carla.Location(x=225.252029, y=-364.109375, z=0.281942),carla.Rotation(pitch=0.000000, yaw=-0.295319, roll=0.000000))
+
+#spawnning vehicle
+vehicle_bp= world.get_blueprint_library().filter('*mini*')
+
+hero_vehicle = world.try_spawn_actor(vehicle_bp[0], spawn_point)
+
+#move simulator view to the car 
+spectator = world.get_spectator()
+spawn_point.locationz = spawn_point.location.z+1
+spectator.set_transform(spawn_point)
+
+# get the car's position on the map 
+vehicle_pos = hero_vehicle.get_transform()
+print(vehicle_pos)
+
+#importing CARLA_AGENT
+import sys
+sys.path.append('C:\WindowsNoEditor\PythonAPI\carla')
+from agents.navigation.behavior_agent import BehaviorAgent
+
+# To start a behavior agent - using carla agents studied from carla webpage 
+agent = BehaviorAgent(hero_vehicle, behavior='normal')
+
+#set a destination for the agent to travel to
+destination = carla.Location(x=300.5, y=-172.5)
+agent.set_destination(destination)
+
+#Instead of finishing the simulation when an agent has reached its target destination, 
+#a new, random route can be generated for the agent to follow:
+while True:
+    if agent.done():
+        agent.set_destination(random.choice(spawn_points).location)
+        print("The target has been reached, searching for another target")
+
+    hero_vehicle.apply_control(agent.run_step())
+
+#car is moved upto near the entrance of the parking lot
+
+# Choose a specific lane (road_id, lane_id)
+road_id = 0  
+lane_id = 0
+
+
+# Generate waypoints for the specified lane
+waypoints = map.generate_waypoints(1.0)
+
+
+waypoints_for_parking_lot = [
+                                             
+    (287.9, -180.5),
+    (283.4, -196.5),
+    (272.7, -201.0),
+]
+
+
+agent.set_waypoints(waypoints_for_parking_lot)
+
+#wait for 5 mins
+time.sleep(300)
